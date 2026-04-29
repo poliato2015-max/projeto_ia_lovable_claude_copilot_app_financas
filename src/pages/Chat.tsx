@@ -106,15 +106,15 @@ const Chat = () => {
   };
 
   const handleVoice = () => {
-    const SR = (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognition; SpeechRecognition?: new () => SpeechRecognition })
-      .webkitSpeechRecognition || (window as unknown as { SpeechRecognition?: new () => SpeechRecognition }).SpeechRecognition;
+    const w = window as unknown as { webkitSpeechRecognition?: new () => any; SpeechRecognition?: new () => any };
+    const SR = w.webkitSpeechRecognition || w.SpeechRecognition;
     if (!SR) {
       toast.info("Ditado por voz não disponível neste navegador.");
       return;
     }
     const rec = new SR();
     rec.lang = "pt-BR";
-    rec.onresult = (e: SpeechRecognitionEvent) => {
+    rec.onresult = (e: any) => {
       const text = e.results[0][0].transcript;
       setInput((p) => (p ? `${p} ${text}` : text));
     };
