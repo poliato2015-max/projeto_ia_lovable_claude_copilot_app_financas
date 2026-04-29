@@ -1,0 +1,4 @@
+project_id = "wlotzapgmrrkyzdnwakx"
+
+[functions.ai-finance]
+verify_jwt = true
