@@ -7,10 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Target, Trash2, Loader2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Plus, Trash2, Loader2, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/format";
 import { z } from "zod";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 type Category = { id: string; name: string; icon: string };
 type Goal = {
@@ -25,9 +30,30 @@ type Goal = {
 const schema = z.object({
   title: z.string().trim().min(2, "Título muito curto").max(100),
   target_amount: z.number().positive("Valor deve ser maior que zero"),
-  category_id: z.string().nullable(),
-  deadline: z.string().nullable(),
 });
+
+const EmptyGoalsIllustration = () => (
+  <svg viewBox="0 0 240 180" className="w-48 h-36 mx-auto mb-4" aria-hidden>
+    <defs>
+      <linearGradient id="goalGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="hsl(var(--primary))" />
+        <stop offset="100%" stopColor="hsl(var(--primary-glow))" />
+      </linearGradient>
+      <linearGradient id="goalGradSoft" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="hsl(var(--primary) / 0.15)" />
+        <stop offset="100%" stopColor="hsl(var(--primary) / 0)" />
+      </linearGradient>
+    </defs>
+    <ellipse cx="120" cy="160" rx="90" ry="10" fill="url(#goalGradSoft)" />
+    <circle cx="120" cy="85" r="55" fill="url(#goalGrad)" opacity="0.15" />
+    <circle cx="120" cy="85" r="42" fill="none" stroke="url(#goalGrad)" strokeWidth="6" />
+    <circle cx="120" cy="85" r="28" fill="none" stroke="url(#goalGrad)" strokeWidth="4" opacity="0.7" />
+    <circle cx="120" cy="85" r="10" fill="url(#goalGrad)" />
+    <path d="M120 25 L120 145" stroke="url(#goalGrad)" strokeWidth="2" strokeDasharray="3 3" opacity="0.4" />
+    <path d="M60 85 L180 85" stroke="url(#goalGrad)" strokeWidth="2" strokeDasharray="3 3" opacity="0.4" />
+    <path d="M155 60 L175 50 L170 70 Z" fill="url(#goalGrad)" />
+  </svg>
+);
 
 const Goals = () => {
   const { user } = useAuth();
@@ -35,6 +61,8 @@ const Goals = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [categoryId, setCategoryId] = useState<string>("none");
+  const [deadline, setDeadline] = useState<Date | undefined>(undefined);
 
   const load = async () => {
     if (!user) return;
@@ -42,31 +70,29 @@ const Goals = () => {
       supabase.from("goals").select("*").order("created_at", { ascending: false }),
       supabase.from("categories").select("id, name, icon").order("name"),
     ]);
-    setGoals((gs ?? []) as Goal[]);
+    const goalsList = (gs ?? []) as Goal[];
     setCategories((cs ?? []) as Category[]);
-    // Recompute current_amount for category goals from transactions
-    if (gs && gs.length > 0) {
+
+    if (goalsList.length > 0) {
       const updates = await Promise.all(
-        (gs as Goal[]).map(async (g) => {
-          if (!g.category_id) return null;
-          const { data: txs } = await supabase
-            .from("transactions")
-            .select("amount")
-            .eq("category_id", g.category_id);
+        goalsList.map(async (g) => {
+          // Soma APENAS despesas (type='expense'). Geral = todas as despesas; com categoria = despesas da categoria.
+          let q = supabase.from("transactions").select("amount").eq("type", "expense");
+          if (g.category_id) q = q.eq("category_id", g.category_id);
+          const { data: txs } = await q;
           const sum = (txs ?? []).reduce((s, t) => s + Number(t.amount), 0);
           if (Number(g.current_amount) !== sum) {
             await supabase.from("goals").update({ current_amount: sum }).eq("id", g.id);
-            return { id: g.id, sum };
           }
-          return null;
+          return { id: g.id, sum };
         })
       );
-      setGoals((prev) =>
-        prev.map((g) => {
-          const u = updates.find((x) => x && x.id === g.id);
-          return u ? { ...g, current_amount: u.sum } : g;
-        })
-      );
+      setGoals(goalsList.map((g) => {
+        const u = updates.find((x) => x.id === g.id);
+        return u ? { ...g, current_amount: u.sum } : g;
+      }));
+    } else {
+      setGoals([]);
     }
   };
 
@@ -79,8 +105,6 @@ const Goals = () => {
     const parsed = schema.safeParse({
       title: fd.get("title"),
       target_amount: Number(fd.get("target_amount")),
-      category_id: (fd.get("category_id") as string) || null,
-      deadline: (fd.get("deadline") as string) || null,
     });
     if (!parsed.success) {
       toast.error(parsed.error.errors[0].message);
@@ -91,8 +115,8 @@ const Goals = () => {
       user_id: user.id,
       title: parsed.data.title,
       target_amount: parsed.data.target_amount,
-      category_id: parsed.data.category_id === "none" ? null : parsed.data.category_id,
-      deadline: parsed.data.deadline,
+      category_id: categoryId === "none" ? null : categoryId,
+      deadline: deadline ? format(deadline, "yyyy-MM-dd") : null,
     });
     setSaving(false);
     if (error) {
@@ -101,6 +125,8 @@ const Goals = () => {
     }
     toast.success("Meta criada! 🎯");
     setOpen(false);
+    setCategoryId("none");
+    setDeadline(undefined);
     load();
   };
 
@@ -139,10 +165,10 @@ const Goals = () => {
               </div>
               <div>
                 <Label>Categoria (opcional)</Label>
-                <Select name="category_id" defaultValue="none">
+                <Select value={categoryId} onValueChange={setCategoryId}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Geral (sem categoria)</SelectItem>
+                    <SelectItem value="none">Geral (todas as despesas)</SelectItem>
                     {categories.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
                     ))}
@@ -150,8 +176,30 @@ const Goals = () => {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="deadline">Prazo (opcional)</Label>
-                <Input id="deadline" name="deadline" type="date" />
+                <Label>Prazo (opcional)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", !deadline && "text-muted-foreground")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {deadline ? format(deadline, "PPP", { locale: ptBR }) : "Escolher data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={deadline}
+                      onSelect={setDeadline}
+                      initialFocus
+                      locale={ptBR}
+                      disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <Button type="submit" variant="hero" className="w-full" disabled={saving}>
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />} Criar meta
@@ -163,7 +211,7 @@ const Goals = () => {
 
       {goals.length === 0 ? (
         <div className="kpi-card text-center py-12">
-          <Target className="w-10 h-10 mx-auto text-primary mb-3" />
+          <EmptyGoalsIllustration />
           <p className="text-muted-foreground">Você ainda não tem metas. Crie a primeira!</p>
         </div>
       ) : (

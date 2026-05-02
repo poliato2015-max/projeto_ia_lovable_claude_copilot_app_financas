@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,19 +7,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Wallet, Loader2 } from "lucide-react";
+import { Wallet, Loader2, Check, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { capitalizeName } from "@/lib/format";
 
-const signUpSchema = z.object({
-  full_name: z.string().trim().min(2, "Nome muito curto").max(100),
-  email: z.string().trim().email("E-mail inválido").max(255),
-  password: z.string().min(8, "Mínimo 8 caracteres").max(72),
-});
+const passwordRules = {
+  length: (s: string) => s.length >= 8,
+  upper: (s: string) => /[A-Z]/.test(s),
+  lower: (s: string) => /[a-z]/.test(s),
+  number: (s: string) => /\d/.test(s),
+  symbol: (s: string) => /[^A-Za-z0-9]/.test(s),
+};
+
 const signInSchema = z.object({
   email: z.string().trim().email("E-mail inválido").max(255),
   password: z.string().min(1, "Informe a senha").max(72),
 });
+
+const traduzErroAuth = (msg: string) => {
+  const m = msg.toLowerCase();
+  if (m.includes("already") || m.includes("registered")) return "Esse e-mail já está cadastrado.";
+  if (m.includes("invalid login")) return "E-mail ou senha incorretos.";
+  if (m.includes("password")) return "A senha não atende aos requisitos.";
+  if (m.includes("email")) return "E-mail inválido.";
+  return msg;
+};
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -27,34 +39,59 @@ const Auth = () => {
   const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
 
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+
   useEffect(() => {
     if (user) navigate("/app", { replace: true });
   }, [user, navigate]);
 
+  const checks = useMemo(() => ({
+    length: passwordRules.length(password),
+    upper: passwordRules.upper(password),
+    lower: passwordRules.lower(password),
+    number: passwordRules.number(password),
+    symbol: passwordRules.symbol(password),
+  }), [password]);
+
+  const allValid = Object.values(checks).every(Boolean);
+
   const onSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const parsed = signUpSchema.safeParse({
-      full_name: fd.get("full_name"),
-      email: fd.get("email"),
-      password: fd.get("password"),
-    });
-    if (!parsed.success) {
-      toast.error(parsed.error.errors[0].message);
+    const trimmedName = fullName.trim().replace(/\s+/g, " ");
+    if (trimmedName.split(" ").length < 2 || trimmedName.length < 3) {
+      toast.error("Por favor, informe seu nome e sobrenome");
       return;
     }
+    const emailOk = z.string().trim().email().safeParse(email).success;
+    if (!emailOk) {
+      toast.error("Informe um e-mail válido");
+      return;
+    }
+    if (!allValid) {
+      toast.error("A senha não atende a todos os requisitos");
+      return;
+    }
+    if (password !== confirm) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+
     setLoading(true);
+    const fullNameNorm = capitalizeName(trimmedName);
     const { error } = await supabase.auth.signUp({
-      email: parsed.data.email,
-      password: parsed.data.password,
+      email: email.trim(),
+      password,
       options: {
         emailRedirectTo: `${window.location.origin}/app`,
-        data: { full_name: parsed.data.full_name },
+        data: { full_name: fullNameNorm },
       },
     });
     setLoading(false);
     if (error) {
-      toast.error(error.message.includes("already") ? "Esse e-mail já está cadastrado." : error.message);
+      toast.error(traduzErroAuth(error.message));
       return;
     }
     toast.success("Conta criada! Bem-vindo(a) ao Bolsa.");
@@ -85,6 +122,13 @@ const Auth = () => {
     toast.success("Bem-vindo(a) de volta!");
     navigate("/app");
   };
+
+  const RuleItem = ({ ok, label }: { ok: boolean; label: string }) => (
+    <li className={`flex items-center gap-1.5 text-xs transition-colors ${ok ? "text-success" : "text-muted-foreground"}`}>
+      {ok ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+      {label}
+    </li>
+  );
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10">
@@ -130,15 +174,60 @@ const Auth = () => {
             <form onSubmit={onSignUp} className="space-y-4">
               <div>
                 <Label htmlFor="name-up">Nome completo</Label>
-                <Input id="name-up" name="full_name" required placeholder="Maria Silva" />
+                <Input
+                  id="name-up"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  placeholder="Maria Silva"
+                  className="capitalize"
+                />
               </div>
               <div>
                 <Label htmlFor="email-up">E-mail</Label>
-                <Input id="email-up" name="email" type="email" autoComplete="email" required placeholder="voce@email.com" />
+                <Input
+                  id="email-up"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="voce@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
               <div>
                 <Label htmlFor="pass-up">Senha</Label>
-                <Input id="pass-up" name="password" type="password" autoComplete="new-password" required minLength={8} placeholder="Mínimo 8 caracteres" />
+                <Input
+                  id="pass-up"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  placeholder="Mínimo 8 caracteres"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1">
+                  <RuleItem ok={checks.length} label="Mínimo 8 caracteres" />
+                  <RuleItem ok={checks.upper} label="Uma letra maiúscula" />
+                  <RuleItem ok={checks.lower} label="Uma letra minúscula" />
+                  <RuleItem ok={checks.number} label="Um número" />
+                  <RuleItem ok={checks.symbol} label="Um símbolo" />
+                </ul>
+              </div>
+              <div>
+                <Label htmlFor="pass-confirm">Confirmar senha</Label>
+                <Input
+                  id="pass-confirm"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  placeholder="Repita a senha"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                />
+                {confirm.length > 0 && confirm !== password && (
+                  <p className="text-xs text-destructive mt-1">As senhas não coincidem</p>
+                )}
               </div>
               <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}

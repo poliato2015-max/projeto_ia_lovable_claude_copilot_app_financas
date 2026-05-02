@@ -9,9 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Send, Mic, Sparkles, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 type Category = { id: string; name: string; icon: string; color: string };
+type TxType = "expense" | "income";
 type ParsedTx = {
+  type: TxType;
   description: string;
   amount: number;
   category_id: string | null;
@@ -21,6 +24,20 @@ type ParsedTx = {
 };
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
+const startVoice = (onText: (s: string) => void) => {
+  const w = window as unknown as { webkitSpeechRecognition?: new () => any; SpeechRecognition?: new () => any };
+  const SR = w.webkitSpeechRecognition || w.SpeechRecognition;
+  if (!SR) {
+    toast.info("Ditado por voz não disponível neste navegador.");
+    return;
+  }
+  const rec = new SR();
+  rec.lang = "pt-BR";
+  rec.onresult = (e: any) => onText(e.results[0][0].transcript);
+  rec.onerror = () => toast.error("Não consegui ouvir, tente de novo.");
+  rec.start();
+};
+
 const Chat = () => {
   const { user } = useAuth();
   const [params] = useSearchParams();
@@ -29,11 +46,12 @@ const Chat = () => {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [input, setInput] = useState("");
-  const [parsed, setParsed] = useState<ParsedTx | null>(null);
+  const [txType, setTxType] = useState<TxType>("expense");
   const [parsing, setParsing] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("");
   const [overrideCategoryId, setOverrideCategoryId] = useState<string | null>(null);
+  const [parsed, setParsed] = useState<ParsedTx | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const [advisorMessages, setAdvisorMessages] = useState<ChatMsg[]>([
     { role: "assistant", content: "Oi! Eu sou seu agente financeiro. Pergunte algo como _\"onde posso economizar?\"_ ou _\"como estão meus gastos com lazer?\"_." },
@@ -52,6 +70,35 @@ const Chat = () => {
     advisorEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [advisorMessages]);
 
+  const saveTransaction = async (tx: ParsedTx, categoryId: string | null, payment: string, type: TxType) => {
+    if (!user) return false;
+    if (type === "expense" && !categoryId) {
+      toast.error("Escolha uma categoria para a despesa.");
+      return false;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("transactions").insert({
+      user_id: user.id,
+      type,
+      description: tx.description || input,
+      amount: tx.amount,
+      category_id: categoryId,
+      payment_method: payment || null,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error("Não foi possível salvar.");
+      return false;
+    }
+    toast.success(type === "income" ? "Receita registrada! 💰" : "Despesa registrada! 💸");
+    setInput("");
+    setParsed(null);
+    setOverrideCategoryId(null);
+    setPaymentMethod("");
+    setTxType("expense");
+    return true;
+  };
+
   const handleParse = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim()) return;
@@ -66,9 +113,26 @@ const Chat = () => {
         toast.error("Não consegui identificar o valor. Tente: \"gastei R$ 50 no mercado\".");
         return;
       }
-      setParsed(result);
+
+      // IA pode sobrescrever o tipo se detectou receita
+      const detectedType: TxType = result.type === "income" ? "income" : txType;
+
+      // Auto-save se IA preencheu tudo
+      const canAutoSave =
+        !!result.amount &&
+        !!result.description &&
+        (detectedType === "income" || !!result.category_id);
+
+      setTxType(detectedType);
       setOverrideCategoryId(result.category_id);
       setPaymentMethod(result.payment_method ?? "");
+
+      if (canAutoSave) {
+        const ok = await saveTransaction(result, result.category_id, result.payment_method ?? "", detectedType);
+        if (!ok) setParsed(result);
+      } else {
+        setParsed(result);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao processar.";
       if (msg.includes("429")) toast.error("Muitas requisições. Aguarde um instante.");
@@ -79,47 +143,9 @@ const Chat = () => {
     }
   };
 
-  const handleSave = async () => {
-    if (!parsed || !user) return;
-    if (!overrideCategoryId) {
-      toast.error("Escolha uma categoria.");
-      return;
-    }
-    setSaving(true);
-    const { error } = await supabase.from("transactions").insert({
-      user_id: user.id,
-      description: parsed.description || input,
-      amount: parsed.amount,
-      category_id: overrideCategoryId,
-      payment_method: paymentMethod || null,
-    });
-    setSaving(false);
-    if (error) {
-      toast.error("Não foi possível salvar.");
-      return;
-    }
-    toast.success("Transação registrada! 💚");
-    setInput("");
-    setParsed(null);
-    setOverrideCategoryId(null);
-    setPaymentMethod("");
-  };
-
-  const handleVoice = () => {
-    const w = window as unknown as { webkitSpeechRecognition?: new () => any; SpeechRecognition?: new () => any };
-    const SR = w.webkitSpeechRecognition || w.SpeechRecognition;
-    if (!SR) {
-      toast.info("Ditado por voz não disponível neste navegador.");
-      return;
-    }
-    const rec = new SR();
-    rec.lang = "pt-BR";
-    rec.onresult = (e: any) => {
-      const text = e.results[0][0].transcript;
-      setInput((p) => (p ? `${p} ${text}` : text));
-    };
-    rec.onerror = () => toast.error("Não consegui ouvir, tente de novo.");
-    rec.start();
+  const handleManualSave = () => {
+    if (!parsed) return;
+    saveTransaction(parsed, overrideCategoryId, paymentMethod, txType);
   };
 
   const sendAdvisor = async (e?: React.FormEvent) => {
@@ -149,7 +175,7 @@ const Chat = () => {
     <div className="space-y-6 max-w-3xl">
       <header>
         <h1 className="text-2xl md:text-3xl font-extrabold">Conversar</h1>
-        <p className="text-sm text-muted-foreground">Registre gastos ou peça conselhos à IA.</p>
+        <p className="text-sm text-muted-foreground">Registre transações ou peça conselhos à IA.</p>
       </header>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
@@ -162,18 +188,50 @@ const Chat = () => {
 
         <TabsContent value="register" className="space-y-4">
           <form onSubmit={handleParse} className="glass-card rounded-2xl p-4 space-y-3">
+            {/* Toggle Despesa/Receita */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-secondary rounded-xl" role="radiogroup" aria-label="Tipo de transação">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={txType === "expense"}
+                onClick={() => setTxType("expense")}
+                className={cn(
+                  "py-2.5 rounded-lg text-sm font-semibold transition-all",
+                  txType === "expense"
+                    ? "bg-destructive text-destructive-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                💸 Gasto
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={txType === "income"}
+                onClick={() => setTxType("income")}
+                className={cn(
+                  "py-2.5 rounded-lg text-sm font-semibold transition-all",
+                  txType === "income"
+                    ? "bg-success text-success-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                💰 Receita
+              </button>
+            </div>
+
             <label htmlFor="tx-input" className="text-sm font-medium">
-              Descreva seu gasto em linguagem natural
+              Descreva em linguagem natural
             </label>
             <div className="flex gap-2">
               <Input
                 id="tx-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder='Ex: "gastei R$ 50 no mercado com pix"'
-                aria-label="Descrição do gasto"
+                placeholder={txType === "income" ? 'Ex: "recebi salário de R$ 3.000"' : 'Ex: "gastei R$ 50 no mercado com pix"'}
+                aria-label="Descrição da transação"
               />
-              <Button type="button" variant="outline" size="icon" onClick={handleVoice} aria-label="Ditar por voz">
+              <Button type="button" variant="outline" size="icon" onClick={() => startVoice((t) => setInput((p) => (p ? `${p} ${t}` : t)))} aria-label="Ditar por voz">
                 <Mic className="w-4 h-4" />
               </Button>
               <Button type="submit" variant="hero" disabled={parsing || !input.trim()}>
@@ -181,7 +239,7 @@ const Chat = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Exemplos: "almoço 35 reais no débito", "uber 22,50", "mercado 187 no crédito".
+              Dica: a IA detecta automaticamente se é receita (ex: "recebi", "salário", "entrada") ou gasto.
             </p>
           </form>
 
@@ -192,8 +250,10 @@ const Chat = () => {
               </h2>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-xs text-muted-foreground">Valor</div>
-                  <div className="text-2xl font-bold">{formatBRL(parsed.amount)}</div>
+                  <div className="text-xs text-muted-foreground">Valor ({txType === "income" ? "receita" : "despesa"})</div>
+                  <div className={cn("text-2xl font-bold", txType === "income" ? "text-success" : "text-destructive")}>
+                    {txType === "income" ? "+ " : "- "}{formatBRL(parsed.amount)}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Descrição</div>
@@ -202,12 +262,13 @@ const Chat = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-muted-foreground">Categoria</label>
-                  <Select value={overrideCategoryId ?? ""} onValueChange={(v) => setOverrideCategoryId(v)}>
+                  <label className="text-xs text-muted-foreground">Categoria {txType === "income" && "(opcional)"}</label>
+                  <Select value={overrideCategoryId ?? "none"} onValueChange={(v) => setOverrideCategoryId(v === "none" ? null : v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Escolha uma categoria" />
                     </SelectTrigger>
                     <SelectContent>
+                      {txType === "income" && <SelectItem value="none">— sem categoria —</SelectItem>}
                       {categories.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.icon} {c.name}
@@ -237,7 +298,7 @@ const Chat = () => {
                 <Button variant="outline" onClick={() => setParsed(null)} className="flex-1">
                   Cancelar
                 </Button>
-                <Button variant="hero" onClick={handleSave} disabled={saving} className="flex-1">
+                <Button variant="hero" onClick={handleManualSave} disabled={saving} className="flex-1">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   Salvar
                 </Button>
@@ -274,6 +335,15 @@ const Chat = () => {
               placeholder="Pergunte algo..."
               aria-label="Mensagem para o agente"
             />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => startVoice((t) => setAdvisorInput((p) => (p ? `${p} ${t}` : t)))}
+              aria-label="Ditar por voz"
+            >
+              <Mic className="w-4 h-4" />
+            </Button>
             <Button type="submit" variant="hero" disabled={advisorLoading || !advisorInput.trim()}>
               <Send className="w-4 h-4" />
             </Button>
