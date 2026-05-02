@@ -68,8 +68,13 @@ Deno.serve(async (req) => {
           {
             role: "system",
             content:
-              `Você extrai informações de gastos em português. Categorias disponíveis: ${catList}. ` +
-              `Sempre escolha a categoria que melhor descreve o gasto. Se não conseguir extrair valor, retorne amount=0.`,
+              `Você extrai informações de transações financeiras em português brasileiro. ` +
+              `Categorias disponíveis: ${catList}. ` +
+              `IMPORTANTE: identifique se é DESPESA ou RECEITA. ` +
+              `Palavras como "recebi", "ganhei", "entrada", "salário", "pagamento recebido", "freela", "rendimento", "depósito", "pix recebido", "venda" indicam RECEITA (type=income). ` +
+              `Palavras como "gastei", "paguei", "comprei", "saída", "débito" indicam DESPESA (type=expense). ` +
+              `Se houver ambiguidade, considere DESPESA por padrão. ` +
+              `Sempre escolha a categoria que melhor descreve. Se for receita sem categoria clara, omita category_name.`,
           },
           { role: "user", content: message },
         ],
@@ -77,30 +82,35 @@ Deno.serve(async (req) => {
           {
             type: "function",
             function: {
-              name: "register_expense",
-              description: "Registra um gasto a partir do texto do usuário",
+              name: "register_transaction",
+              description: "Registra uma transação (despesa ou receita) a partir do texto do usuário",
               parameters: {
                 type: "object",
                 properties: {
-                  description: { type: "string", description: "Breve descrição do gasto (ex: 'mercado', 'uber até casa')" },
+                  type: {
+                    type: "string",
+                    enum: ["expense", "income"],
+                    description: "Tipo: 'expense' (despesa) ou 'income' (receita)",
+                  },
+                  description: { type: "string", description: "Breve descrição (ex: 'mercado', 'salário')" },
                   amount: { type: "number", description: "Valor em reais, sempre positivo" },
                   category_name: {
                     type: "string",
                     description: "Nome exato da categoria. Omita se incerto.",
-                    enum: (categories ?? []).map((c) => c.name),
+                    enum: (categories ?? []).map((c) => c.name).filter((n) => n && n.length > 0),
                   },
                   payment_method: {
                     type: "string",
-                    description: "Método de pagamento (ex: 'pix', 'crédito', 'débito', 'dinheiro'). Omita se não mencionado.",
+                    description: "Método de pagamento (pix, crédito, débito, dinheiro, boleto). Omita se não mencionado.",
                   },
                 },
-                required: ["description", "amount"],
+                required: ["type", "description", "amount"],
                 additionalProperties: false,
               },
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: "register_expense" } },
+        tool_choice: { type: "function", function: { name: "register_transaction" } },
       });
 
       const tc = aiRes.choices?.[0]?.message?.tool_calls?.[0];
@@ -108,6 +118,7 @@ Deno.serve(async (req) => {
       const matched = (categories ?? []).find((c) => c.name === args?.category_name);
       return new Response(
         JSON.stringify({
+          type: args?.type === "income" ? "income" : "expense",
           description: args?.description ?? "",
           amount: Number(args?.amount ?? 0),
           category_id: matched?.id ?? null,
@@ -120,23 +131,28 @@ Deno.serve(async (req) => {
     }
 
     if (mode === "advisor") {
-      // Gather user transaction summary (last 90 days)
       const since = new Date();
       since.setDate(since.getDate() - 90);
       const { data: txs } = await supabase
         .from("transactions")
-        .select("amount, created_at, category_id, description")
+        .select("amount, created_at, category_id, description, type")
         .gte("created_at", since.toISOString());
 
       const catMap = new Map((categories ?? []).map((c) => [c.id, c.name]));
-      const totals: Record<string, number> = {};
+      const expenseTotals: Record<string, number> = {};
+      let incomeTotal = 0;
       for (const t of txs ?? []) {
-        const cat = catMap.get(t.category_id as string) ?? "Outros";
-        totals[cat] = (totals[cat] ?? 0) + Number(t.amount);
+        if ((t as any).type === "income") {
+          incomeTotal += Number(t.amount);
+        } else {
+          const cat = catMap.get(t.category_id as string) ?? "Outros";
+          expenseTotals[cat] = (expenseTotals[cat] ?? 0) + Number(t.amount);
+        }
       }
-      const summary = Object.entries(totals)
+      const expenseSummary = Object.entries(expenseTotals)
         .map(([k, v]) => `${k}: R$ ${v.toFixed(2)}`)
-        .join("; ") || "Sem transações registradas ainda.";
+        .join("; ") || "Sem despesas registradas.";
+      const summary = `Receitas totais: R$ ${incomeTotal.toFixed(2)}. Despesas por categoria: ${expenseSummary}.`;
 
       const aiRes = await callAI({
         model: "google/gemini-3-flash-preview",
@@ -150,7 +166,7 @@ Deno.serve(async (req) => {
           },
           {
             role: "user",
-            content: `Resumo dos meus gastos dos últimos 90 dias por categoria: ${summary}\n\nMinha pergunta: ${message}`,
+            content: `Resumo dos meus últimos 90 dias: ${summary}\n\nMinha pergunta: ${message}`,
           },
         ],
       });
