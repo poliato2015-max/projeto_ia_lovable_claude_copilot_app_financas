@@ -117,11 +117,12 @@ const Chat = () => {
       // IA pode sobrescrever o tipo se detectou receita
       const detectedType: TxType = result.type === "income" ? "income" : txType;
 
-      // Auto-save se IA preencheu tudo
+      // Auto-save apenas quando IA preencheu valor + descrição + categoria + meio de pagamento
       const canAutoSave =
         !!result.amount &&
         !!result.description &&
-        (detectedType === "income" || !!result.category_id);
+        !!result.category_id &&
+        !!result.payment_method;
 
       setTxType(detectedType);
       setOverrideCategoryId(result.category_id);
