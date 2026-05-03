@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Wallet, Loader2, Check, X } from "lucide-react";
+import { Wallet, Loader2, Check, X, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { capitalizeName } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 const passwordRules = {
   length: (s: string) => s.length >= 8,
@@ -33,6 +34,20 @@ const traduzErroAuth = (msg: string) => {
   return msg;
 };
 
+type SignupErrors = {
+  fullName?: string;
+  email?: string;
+  password?: string;
+  confirm?: string;
+};
+
+const FieldError = ({ msg }: { msg?: string }) =>
+  msg ? (
+    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+      <AlertTriangle className="w-3.5 h-3.5" /> {msg}
+    </p>
+  ) : null;
+
 const Auth = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -43,6 +58,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [errors, setErrors] = useState<SignupErrors>({});
 
   useEffect(() => {
     if (user) navigate("/app", { replace: true });
@@ -61,23 +77,17 @@ const Auth = () => {
   const onSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmedName = fullName.trim().replace(/\s+/g, " ");
+    const newErrors: SignupErrors = {};
     if (trimmedName.split(" ").length < 2 || trimmedName.length < 3) {
-      toast.error("Por favor, informe seu nome e sobrenome");
-      return;
+      newErrors.fullName = "Por favor, informe seu nome e sobrenome";
     }
     const emailOk = z.string().trim().email().safeParse(email).success;
-    if (!emailOk) {
-      toast.error("Informe um e-mail válido");
-      return;
-    }
-    if (!allValid) {
-      toast.error("A senha não atende a todos os requisitos");
-      return;
-    }
-    if (password !== confirm) {
-      toast.error("As senhas não coincidem");
-      return;
-    }
+    if (!emailOk) newErrors.email = "Informe um e-mail válido";
+    if (!allValid) newErrors.password = "A senha não atende aos requisitos";
+    if (password !== confirm) newErrors.confirm = "As senhas não coincidem";
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
     setLoading(true);
     const fullNameNorm = capitalizeName(trimmedName);
@@ -130,6 +140,8 @@ const Auth = () => {
     </li>
   );
 
+  const errCls = "border-destructive focus-visible:ring-destructive";
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10">
       <Link to="/" className="flex items-center gap-2 mb-8">
@@ -171,17 +183,19 @@ const Auth = () => {
           </TabsContent>
 
           <TabsContent value="signup">
-            <form onSubmit={onSignUp} className="space-y-4">
+            <form onSubmit={onSignUp} className="space-y-4" noValidate>
               <div>
                 <Label htmlFor="name-up">Nome completo</Label>
                 <Input
                   id="name-up"
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => { setFullName(e.target.value); if (errors.fullName) setErrors((p) => ({ ...p, fullName: undefined })); }}
                   required
                   placeholder="Maria Silva"
-                  className="capitalize"
+                  className={cn("capitalize", errors.fullName && errCls)}
+                  aria-invalid={!!errors.fullName}
                 />
+                <FieldError msg={errors.fullName} />
               </div>
               <div>
                 <Label htmlFor="email-up">E-mail</Label>
@@ -192,8 +206,11 @@ const Auth = () => {
                   required
                   placeholder="voce@email.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors((p) => ({ ...p, email: undefined })); }}
+                  className={cn(errors.email && errCls)}
+                  aria-invalid={!!errors.email}
                 />
+                <FieldError msg={errors.email} />
               </div>
               <div>
                 <Label htmlFor="pass-up">Senha</Label>
@@ -204,8 +221,11 @@ const Auth = () => {
                   required
                   placeholder="Mínimo 8 caracteres"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); if (errors.password) setErrors((p) => ({ ...p, password: undefined })); }}
+                  className={cn(errors.password && errCls)}
+                  aria-invalid={!!errors.password}
                 />
+                <FieldError msg={errors.password} />
                 <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1">
                   <RuleItem ok={checks.length} label="Mínimo 8 caracteres" />
                   <RuleItem ok={checks.upper} label="Uma letra maiúscula" />
@@ -223,11 +243,11 @@ const Auth = () => {
                   required
                   placeholder="Repita a senha"
                   value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
+                  onChange={(e) => { setConfirm(e.target.value); if (errors.confirm) setErrors((p) => ({ ...p, confirm: undefined })); }}
+                  className={cn(((confirm.length > 0 && confirm !== password) || errors.confirm) && errCls)}
+                  aria-invalid={!!errors.confirm || (confirm.length > 0 && confirm !== password)}
                 />
-                {confirm.length > 0 && confirm !== password && (
-                  <p className="text-xs text-destructive mt-1">As senhas não coincidem</p>
-                )}
+                <FieldError msg={errors.confirm || (confirm.length > 0 && confirm !== password ? "As senhas não coincidem" : undefined)} />
               </div>
               <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}

@@ -66,10 +66,13 @@ const Dashboard = () => {
 
   const expensesByCategory = useMemo(() => {
     const m: Record<string, number> = {};
+    let total = 0;
     for (const t of txs) {
       if (t.type === "income") continue;
       const key = t.category_id ?? "none";
-      m[key] = (m[key] ?? 0) + Number(t.amount);
+      const v = Number(t.amount);
+      m[key] = (m[key] ?? 0) + v;
+      total += v;
     }
     return Object.entries(m).map(([id, value]) => {
       const cat = catMap.get(id);
@@ -77,6 +80,7 @@ const Dashboard = () => {
         name: cat ? `${cat.icon} ${cat.name}` : "Sem categoria",
         rawName: cat?.name ?? "Sem categoria",
         value,
+        pct: total > 0 ? (value / total) * 100 : 0,
         color: cat?.color ? `hsl(${cat.color})` : "hsl(var(--muted-foreground))",
       };
     }).sort((a, b) => b.value - a.value);
@@ -132,21 +136,33 @@ const Dashboard = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <article className="kpi-card">
-            <h2 className="font-bold mb-4">Despesas por categoria</h2>
+            <h2 className="font-bold mb-1">Distribuição de despesas</h2>
+            <p className="text-xs text-muted-foreground mb-4">Como suas despesas se dividem por categoria</p>
             {expensesByCategory.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhuma despesa no período.</p>
             ) : (
               <>
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
-                    <Pie data={expensesByCategory} dataKey="value" nameKey="name" innerRadius={60} outerRadius={100} paddingAngle={2}>
+                    <Pie
+                      data={expensesByCategory}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      label={(e: { pct?: number }) => (e.pct && e.pct >= 5 ? `${e.pct.toFixed(0)}%` : "")}
+                      labelLine={false}
+                    >
                       {expensesByCategory.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                     </Pie>
                     <Tooltip
                       contentStyle={tooltipStyle}
                       itemStyle={{ color: "hsl(var(--popover-foreground))" }}
                       labelStyle={{ color: "hsl(var(--popover-foreground))" }}
-                      formatter={(v: number) => formatBRL(v)}
+                      formatter={(v: number, _n: string, p: { payload?: { pct?: number } }) =>
+                        [`${formatBRL(v)} · ${(p?.payload?.pct ?? 0).toFixed(1)}%`, "Total"]
+                      }
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -157,7 +173,9 @@ const Dashboard = () => {
                         <span className="w-3 h-3 rounded-full" style={{ background: c.color }} />
                         {c.name}
                       </span>
-                      <span className="font-semibold">{formatBRL(c.value)}</span>
+                      <span className="font-semibold">
+                        {formatBRL(c.value)} <span className="text-muted-foreground">· {c.pct.toFixed(0)}%</span>
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -166,7 +184,8 @@ const Dashboard = () => {
           </article>
 
           <article className="kpi-card">
-            <h2 className="font-bold mb-4">Receitas vs Despesas no período</h2>
+            <h2 className="font-bold mb-1">Receitas vs Despesas no período</h2>
+            <p className="text-xs text-muted-foreground mb-4">Compare entradas e saídas ao longo do tempo</p>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={overTime}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -186,26 +205,29 @@ const Dashboard = () => {
           </article>
 
           <article className="kpi-card lg:col-span-2">
-            <h2 className="font-bold mb-4">Comparativo de gastos por categoria</h2>
+            <h2 className="font-bold mb-1">Top categorias</h2>
+            <p className="text-xs text-muted-foreground mb-4">Ranking de onde mais sai dinheiro</p>
             {expensesByCategory.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhuma despesa no período.</p>
             ) : (
-              <ResponsiveContainer width="100%" height={Math.max(220, expensesByCategory.length * 40)}>
-                <BarChart data={expensesByCategory} layout="vertical" margin={{ left: 16, right: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <YAxis type="category" dataKey="name" width={140} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    itemStyle={{ color: "hsl(var(--popover-foreground))" }}
-                    labelStyle={{ color: "hsl(var(--popover-foreground))" }}
-                    formatter={(v: number) => formatBRL(v)}
-                  />
-                  <Bar dataKey="value" name="Total" radius={[0, 8, 8, 0]}>
-                    {expensesByCategory.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <ul className="space-y-3">
+                {expensesByCategory.map((c) => (
+                  <li key={c.name}>
+                    <div className="flex items-center justify-between text-sm mb-1 gap-3">
+                      <span className="font-medium flex items-center gap-2 min-w-0">
+                        <span className="w-3 h-3 rounded-full shrink-0" style={{ background: c.color }} />
+                        <span className="truncate">{c.name}</span>
+                      </span>
+                      <span className="text-muted-foreground shrink-0 text-right">
+                        <strong className="text-foreground">{formatBRL(c.value)}</strong> · {c.pct.toFixed(0)}% do total
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${c.pct}%`, background: c.color }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </article>
         </div>

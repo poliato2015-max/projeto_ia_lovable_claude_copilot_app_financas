@@ -5,10 +5,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatBRL, formatDate, capitalizeName } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowDownRight, Plus, Sparkles, Target, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { ArrowDownRight, Plus, Sparkles, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 
 type Tx = { id: string; amount: number; description: string; created_at: string; category_id: string | null; type: string };
-type Goal = { id: string; title: string; target_amount: number; current_amount: number };
+type Goal = { id: string; title: string; target_amount: number; current_amount: number; type: string; category_id: string | null };
 
 const Home = () => {
   const { user } = useAuth();
@@ -100,10 +100,7 @@ const Home = () => {
 
         <article className="kpi-card">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-primary" />
-              <h2 className="font-bold">🎯 Meta ativa</h2>
-            </div>
+            <h2 className="font-bold">🎯 Meta ativa</h2>
             <Link to="/app/metas">
               <Button variant="ghost" size="sm">Ver todas</Button>
             </Link>

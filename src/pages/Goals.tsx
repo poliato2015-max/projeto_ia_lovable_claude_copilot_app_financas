@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-type Category = { id: string; name: string; icon: string };
+type Category = { id: string; name: string; icon: string; type: string };
+type GoalType = "expense" | "income";
 type Goal = {
   id: string;
   title: string;
@@ -25,6 +26,7 @@ type Goal = {
   current_amount: number;
   category_id: string | null;
   deadline: string | null;
+  type: GoalType;
 };
 
 const schema = z.object({
@@ -61,14 +63,21 @@ const Goals = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [goalType, setGoalType] = useState<GoalType>("expense");
   const [categoryId, setCategoryId] = useState<string>("none");
   const [deadline, setDeadline] = useState<Date | undefined>(undefined);
+  const [calOpen, setCalOpen] = useState(false);
+
+  const filteredCategories = useMemo(
+    () => categories.filter((c) => (c.type || "expense") === goalType),
+    [categories, goalType]
+  );
 
   const load = async () => {
     if (!user) return;
     const [{ data: gs }, { data: cs }] = await Promise.all([
       supabase.from("goals").select("*").order("created_at", { ascending: false }),
-      supabase.from("categories").select("id, name, icon").order("name"),
+      supabase.from("categories").select("id, name, icon, type").order("name"),
     ]);
     const goalsList = (gs ?? []) as Goal[];
     setCategories((cs ?? []) as Category[]);
@@ -76,8 +85,8 @@ const Goals = () => {
     if (goalsList.length > 0) {
       const updates = await Promise.all(
         goalsList.map(async (g) => {
-          // Soma APENAS despesas (type='expense'). Geral = todas as despesas; com categoria = despesas da categoria.
-          let q = supabase.from("transactions").select("amount").eq("type", "expense");
+          // Soma transações do mesmo tipo da meta (income ou expense)
+          let q = supabase.from("transactions").select("amount").eq("type", g.type || "expense");
           if (g.category_id) q = q.eq("category_id", g.category_id);
           const { data: txs } = await q;
           const sum = (txs ?? []).reduce((s, t) => s + Number(t.amount), 0);
@@ -98,6 +107,9 @@ const Goals = () => {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
 
+  // Reseta categoria ao trocar tipo
+  useEffect(() => { setCategoryId("none"); }, [goalType]);
+
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) return;
@@ -115,6 +127,7 @@ const Goals = () => {
       user_id: user.id,
       title: parsed.data.title,
       target_amount: parsed.data.target_amount,
+      type: goalType,
       category_id: categoryId === "none" ? null : categoryId,
       deadline: deadline ? format(deadline, "yyyy-MM-dd") : null,
     });
@@ -125,6 +138,7 @@ const Goals = () => {
     }
     toast.success("Meta criada! 🎯");
     setOpen(false);
+    setGoalType("expense");
     setCategoryId("none");
     setDeadline(undefined);
     load();
@@ -164,12 +178,47 @@ const Goals = () => {
                 <Input id="target_amount" name="target_amount" type="number" min="1" step="0.01" required placeholder="300" />
               </div>
               <div>
+                <Label>Tipo</Label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-secondary rounded-xl mt-1" role="radiogroup">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={goalType === "expense"}
+                    onClick={() => setGoalType("expense")}
+                    className={cn(
+                      "py-2 rounded-lg text-sm font-semibold transition-all",
+                      goalType === "expense"
+                        ? "bg-destructive text-destructive-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    💸 Despesa
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={goalType === "income"}
+                    onClick={() => setGoalType("income")}
+                    className={cn(
+                      "py-2 rounded-lg text-sm font-semibold transition-all",
+                      goalType === "income"
+                        ? "bg-success text-success-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    💰 Receita
+                  </button>
+                </div>
+              </div>
+              <div>
                 <Label>Categoria (opcional)</Label>
                 <Select value={categoryId} onValueChange={setCategoryId}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Geral (todas as despesas)</SelectItem>
-                    {categories.map((c) => (
+                    <SelectItem value="none">
+                      Geral (todas as {goalType === "income" ? "receitas" : "despesas"})
+                    </SelectItem>
+                    {filteredCategories.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -177,7 +226,7 @@ const Goals = () => {
               </div>
               <div>
                 <Label>Prazo (opcional)</Label>
-                <Popover>
+                <Popover open={calOpen} onOpenChange={setCalOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       type="button"
@@ -192,7 +241,7 @@ const Goals = () => {
                     <Calendar
                       mode="single"
                       selected={deadline}
-                      onSelect={setDeadline}
+                      onSelect={(d) => { setDeadline(d); setCalOpen(false); }}
                       initialFocus
                       locale={ptBR}
                       disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
@@ -219,12 +268,15 @@ const Goals = () => {
           {goals.map((g) => {
             const cat = categories.find((c) => c.id === g.category_id);
             const pct = Math.min(100, (Number(g.current_amount) / Number(g.target_amount)) * 100);
-            const over = pct >= 100;
+            const reached = pct >= 100;
+            const isIncome = g.type === "income";
+            const icon = cat?.icon ?? "🎯";
+            const reachedColor = isIncome ? "text-success" : "text-destructive";
             return (
               <article key={g.id} className="kpi-card">
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xl" aria-hidden>{cat?.icon ?? "🎯"}</span>
+                    <span className="text-xl" aria-hidden>{icon}</span>
                     <h2 className="font-bold">{g.title}</h2>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => onDelete(g.id)} aria-label="Remover meta">
@@ -236,7 +288,7 @@ const Goals = () => {
                   <span className="text-muted-foreground">
                     {formatBRL(Number(g.current_amount))} de {formatBRL(Number(g.target_amount))}
                   </span>
-                  <span className={`font-semibold ${over ? "text-destructive" : "text-primary"}`}>{pct.toFixed(0)}%</span>
+                  <span className={`font-semibold ${reached ? reachedColor : "text-primary"}`}>{pct.toFixed(0)}%</span>
                 </div>
                 {g.deadline && (
                   <p className="text-xs text-muted-foreground mt-2">
