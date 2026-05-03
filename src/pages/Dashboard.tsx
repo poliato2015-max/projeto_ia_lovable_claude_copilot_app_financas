@@ -66,10 +66,13 @@ const Dashboard = () => {
 
   const expensesByCategory = useMemo(() => {
     const m: Record<string, number> = {};
+    let total = 0;
     for (const t of txs) {
       if (t.type === "income") continue;
       const key = t.category_id ?? "none";
-      m[key] = (m[key] ?? 0) + Number(t.amount);
+      const v = Number(t.amount);
+      m[key] = (m[key] ?? 0) + v;
+      total += v;
     }
     return Object.entries(m).map(([id, value]) => {
       const cat = catMap.get(id);
@@ -77,6 +80,7 @@ const Dashboard = () => {
         name: cat ? `${cat.icon} ${cat.name}` : "Sem categoria",
         rawName: cat?.name ?? "Sem categoria",
         value,
+        pct: total > 0 ? (value / total) * 100 : 0,
         color: cat?.color ? `hsl(${cat.color})` : "hsl(var(--muted-foreground))",
       };
     }).sort((a, b) => b.value - a.value);
