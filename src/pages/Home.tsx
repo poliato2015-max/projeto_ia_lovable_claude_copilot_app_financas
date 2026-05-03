@@ -5,10 +5,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatBRL, formatDate, capitalizeName } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowDownRight, Plus, Sparkles, Target, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { ArrowDownRight, Plus, Sparkles, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 
 type Tx = { id: string; amount: number; description: string; created_at: string; category_id: string | null; type: string };
-type Goal = { id: string; title: string; target_amount: number; current_amount: number };
+type Goal = { id: string; title: string; target_amount: number; current_amount: number; type: string; category_id: string | null };
 
 const Home = () => {
   const { user } = useAuth();
