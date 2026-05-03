@@ -100,10 +100,7 @@ const Home = () => {
 
         <article className="kpi-card">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-primary" />
-              <h2 className="font-bold">🎯 Meta ativa</h2>
-            </div>
+            <h2 className="font-bold">🎯 Meta ativa</h2>
             <Link to="/app/metas">
               <Button variant="ghost" size="sm">Ver todas</Button>
             </Link>
