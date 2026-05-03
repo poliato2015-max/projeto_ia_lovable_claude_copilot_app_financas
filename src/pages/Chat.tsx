@@ -215,59 +215,42 @@ const Chat = () => {
           {parsed && (
             <article className="glass-card rounded-2xl p-5 space-y-4 border-primary/30">
               <h2 className="font-bold flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" /> Confirme os dados
+                <Sparkles className="w-4 h-4 text-primary" /> Falta o meio de pagamento
               </h2>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-xs text-muted-foreground">Valor ({txType === "income" ? "receita" : "despesa"})</div>
-                  <div className={cn("text-2xl font-bold", txType === "income" ? "text-success" : "text-destructive")}>
+              <div className="rounded-xl bg-secondary/50 p-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{txType === "income" ? "Receita" : "Despesa"}</span>
+                  <span className={cn("text-xl font-bold", txType === "income" ? "text-success" : "text-destructive")}>
                     {txType === "income" ? "+ " : "- "}{formatBRL(parsed.amount)}
+                  </span>
+                </div>
+                <div className="text-sm font-medium line-clamp-2">{parsed.description}</div>
+                {overrideCategoryId && (
+                  <div className="text-xs text-muted-foreground">
+                    Categoria: {categories.find((c) => c.id === overrideCategoryId)?.icon} {categories.find((c) => c.id === overrideCategoryId)?.name}
                   </div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Descrição</div>
-                  <div className="font-medium line-clamp-2">{parsed.description}</div>
-                </div>
+                )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground">Categoria {txType === "income" && "(opcional)"}</label>
-                  <Select value={overrideCategoryId ?? "none"} onValueChange={(v) => setOverrideCategoryId(v === "none" ? null : v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escolha uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {txType === "income" && <SelectItem value="none">— sem categoria —</SelectItem>}
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.icon} {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Pagamento</label>
-                  <Select value={paymentMethod || "none"} onValueChange={(v) => setPaymentMethod(v === "none" ? "" : v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Opcional" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">— não informar —</SelectItem>
-                      <SelectItem value="pix">PIX</SelectItem>
-                      <SelectItem value="débito">Débito</SelectItem>
-                      <SelectItem value="crédito">Crédito</SelectItem>
-                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                      <SelectItem value="boleto">Boleto</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Meio de pagamento *</label>
+                <Select value={paymentMethod || ""} onValueChange={(v) => setPaymentMethod(v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um meio de pagamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="débito">Débito</SelectItem>
+                    <SelectItem value="crédito">Crédito</SelectItem>
+                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="boleto">Boleto</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setParsed(null)} className="flex-1">
                   Cancelar
                 </Button>
-                <Button variant="hero" onClick={handleManualSave} disabled={saving} className="flex-1">
+                <Button variant="hero" onClick={handleManualSave} disabled={saving || !paymentMethod} className="flex-1">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   Salvar
                 </Button>
