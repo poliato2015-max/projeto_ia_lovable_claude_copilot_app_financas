@@ -47,8 +47,10 @@ export const PwaInstallPrompt = () => {
           <Download className="w-5 h-5 text-primary-foreground" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm">Adicionar à tela inicial</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Acesse o Bolsa rapidamente como um app.</p>
+          <p className="font-bold text-sm">Instalar o Bolsa</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Adicione o Bolsa à sua tela inicial e acesse suas finanças rapidamente, sem precisar da Play Store.
+          </p>
           <div className="flex gap-2 mt-3">
             <Button size="sm" variant="hero" onClick={onInstall}>Instalar</Button>
             <Button size="sm" variant="ghost" onClick={onDismiss}>Agora não</Button>
