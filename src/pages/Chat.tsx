@@ -188,38 +188,6 @@ const Chat = () => {
 
         <TabsContent value="register" className="space-y-4">
           <form onSubmit={handleParse} className="glass-card rounded-2xl p-4 space-y-3">
-            {/* Toggle Despesa/Receita */}
-            <div className="grid grid-cols-2 gap-2 p-1 bg-secondary rounded-xl" role="radiogroup" aria-label="Tipo de transação">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={txType === "expense"}
-                onClick={() => setTxType("expense")}
-                className={cn(
-                  "py-2.5 rounded-lg text-sm font-semibold transition-all",
-                  txType === "expense"
-                    ? "bg-destructive text-destructive-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                💸 Gasto
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={txType === "income"}
-                onClick={() => setTxType("income")}
-                className={cn(
-                  "py-2.5 rounded-lg text-sm font-semibold transition-all",
-                  txType === "income"
-                    ? "bg-success text-success-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                💰 Receita
-              </button>
-            </div>
-
             <label htmlFor="tx-input" className="text-sm font-medium">
               Descreva em linguagem natural
             </label>
@@ -228,7 +196,7 @@ const Chat = () => {
                 id="tx-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={txType === "income" ? 'Ex: "recebi salário de R$ 3.000"' : 'Ex: "gastei R$ 50 no mercado com pix"'}
+                placeholder='Ex: "gastei R$ 50 no mercado com pix" ou "recebi salário de R$ 3.000"'
                 aria-label="Descrição da transação"
               />
               <Button type="button" variant="outline" size="icon" onClick={() => startVoice((t) => setInput((p) => (p ? `${p} ${t}` : t)))} aria-label="Ditar por voz">
@@ -239,7 +207,7 @@ const Chat = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Dica: a IA detecta automaticamente se é receita (ex: "recebi", "salário", "entrada") ou gasto.
+              A IA detecta automaticamente se é receita (ex: "recebi", "salário", "entrada") ou gasto.
             </p>
           </form>
 
