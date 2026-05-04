@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { formatBRL, formatDate, formatDateCSV } from "@/lib/format";
+import { formatBRL, formatDate, formatDateCSV, stripEmojis } from "@/lib/format";
 
 type Category = { id: string; name: string; icon: string };
 type Tx = {
