@@ -27,7 +27,7 @@ const periodStart = (p: Period): Date | null => {
   d.setHours(0, 0, 0, 0);
   if (p === "day") return d;
   if (p === "week") {
-    d.setDate(d.getDate() - d.getDay());
+    d.setDate(d.getDate() - 7);
     return d;
   }
   if (p === "month") return new Date(d.getFullYear(), d.getMonth(), 1);
