@@ -46,7 +46,7 @@ const Reports = () => {
     if (!user) return;
     const [{ data: t }, { data: c }] = await Promise.all([
       supabase.from("transactions").select("*").order("created_at", { ascending: false }).limit(500),
-      supabase.from("categories").select("id, name, icon"),
+      supabase.from("categories").select("id, name, icon, type"),
     ]);
     setTxs((t ?? []) as Tx[]);
     setCats((c ?? []) as Category[]);
@@ -60,20 +60,33 @@ const Reports = () => {
   };
   const catNamePlain = (id: string | null) => {
     const c = cats.find((x) => x.id === id);
-    return c ? c.name : "Sem categoria";
+    return c ? stripEmojis(c.name) : "Sem categoria";
   };
+
+  // Reset categoria ao mudar tipo se ela não pertencer ao novo tipo
+  useEffect(() => {
+    if (categoryFilter === "all" || categoryFilter === "none") return;
+    const c = cats.find((x) => x.id === categoryFilter);
+    if (typeFilter !== "all" && c && c.type !== typeFilter) {
+      setCategoryFilter("all");
+    }
+  }, [typeFilter, cats, categoryFilter]);
+
+  const expenseCats = useMemo(() => cats.filter((c) => c.type === "expense"), [cats]);
+  const incomeCats = useMemo(() => cats.filter((c) => c.type === "income"), [cats]);
 
   const filtered = useMemo(() => {
     const since = periodStart(period);
     return txs.filter((t) => {
       if (since && new Date(t.created_at) < since) return false;
+      if (typeFilter !== "all" && t.type !== typeFilter) return false;
       if (categoryFilter !== "all") {
         if (categoryFilter === "none" && t.category_id !== null) return false;
         if (categoryFilter !== "none" && t.category_id !== categoryFilter) return false;
       }
       return true;
     });
-  }, [txs, period, categoryFilter]);
+  }, [txs, period, typeFilter, categoryFilter]);
 
   const exportCSV = () => {
     if (filtered.length === 0) {
@@ -84,10 +97,10 @@ const Reports = () => {
     const rows = filtered.map((t) => [
       formatDateCSV(t.created_at),
       t.type === "income" ? "Receita" : "Despesa",
-      `"${(t.description ?? "").replace(/"/g, '""')}"`,
+      `"${stripEmojis(t.description).replace(/"/g, '""')}"`,
       `"${catNamePlain(t.category_id).replace(/"/g, '""')}"`,
       Number(t.amount).toFixed(2).replace(".", ","),
-      `"${(t.payment_method ?? "").replace(/"/g, '""')}"`,
+      `"${stripEmojis(t.payment_method).replace(/"/g, '""')}"`,
     ]);
     const csv = [header.join(";"), ...rows.map((r) => r.join(";"))].join("\r\n");
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
