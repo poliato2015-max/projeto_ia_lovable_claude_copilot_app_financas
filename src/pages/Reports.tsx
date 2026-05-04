@@ -8,7 +8,7 @@ import { Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatBRL, formatDate, formatDateCSV, stripEmojis } from "@/lib/format";
 
-type Category = { id: string; name: string; icon: string };
+type Category = { id: string; name: string; icon: string; type: string };
 type Tx = {
   id: string;
   description: string;
