@@ -19,6 +19,7 @@ type Tx = {
   type: string;
 };
 type Period = "day" | "week" | "month" | "year" | "all";
+type TypeFilter = "all" | "expense" | "income";
 
 const periodStart = (p: Period): Date | null => {
   if (p === "all") return null;
