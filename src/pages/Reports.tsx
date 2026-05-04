@@ -144,14 +144,43 @@ const Reports = () => {
             <TabsTrigger value="all">Tudo</TabsTrigger>
           </TabsList>
         </Tabs>
+        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeFilter)}>
+          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="expense">💸 Despesa</SelectItem>
+            <SelectItem value="income">💰 Receita</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
           <SelectTrigger className="sm:w-64"><SelectValue placeholder="Categoria" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas as categorias</SelectItem>
             <SelectItem value="none">Sem categoria</SelectItem>
-            {cats.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
-            ))}
+            {typeFilter === "all" ? (
+              <>
+                {expenseCats.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-destructive">── Despesas ──</SelectLabel>
+                    {expenseCats.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+                {incomeCats.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-success">── Receitas ──</SelectLabel>
+                    {incomeCats.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+              </>
+            ) : (
+              (typeFilter === "expense" ? expenseCats : incomeCats).map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>
