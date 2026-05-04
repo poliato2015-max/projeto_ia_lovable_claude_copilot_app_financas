@@ -3,12 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { formatBRL, formatDate, formatDateCSV } from "@/lib/format";
+import { formatBRL, formatDate, formatDateCSV, stripEmojis } from "@/lib/format";
 
-type Category = { id: string; name: string; icon: string };
+type Category = { id: string; name: string; icon: string; type: string };
 type Tx = {
   id: string;
   description: string;
@@ -19,6 +19,7 @@ type Tx = {
   type: string;
 };
 type Period = "day" | "week" | "month" | "year" | "all";
+type TypeFilter = "all" | "expense" | "income";
 
 const periodStart = (p: Period): Date | null => {
   if (p === "all") return null;
@@ -38,13 +39,14 @@ const Reports = () => {
   const [txs, setTxs] = useState<Tx[]>([]);
   const [cats, setCats] = useState<Category[]>([]);
   const [period, setPeriod] = useState<Period>("month");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const load = async () => {
     if (!user) return;
     const [{ data: t }, { data: c }] = await Promise.all([
       supabase.from("transactions").select("*").order("created_at", { ascending: false }).limit(500),
-      supabase.from("categories").select("id, name, icon"),
+      supabase.from("categories").select("id, name, icon, type"),
     ]);
     setTxs((t ?? []) as Tx[]);
     setCats((c ?? []) as Category[]);
@@ -58,20 +60,33 @@ const Reports = () => {
   };
   const catNamePlain = (id: string | null) => {
     const c = cats.find((x) => x.id === id);
-    return c ? c.name : "Sem categoria";
+    return c ? stripEmojis(c.name) : "Sem categoria";
   };
+
+  // Reset categoria ao mudar tipo se ela não pertencer ao novo tipo
+  useEffect(() => {
+    if (categoryFilter === "all" || categoryFilter === "none") return;
+    const c = cats.find((x) => x.id === categoryFilter);
+    if (typeFilter !== "all" && c && c.type !== typeFilter) {
+      setCategoryFilter("all");
+    }
+  }, [typeFilter, cats, categoryFilter]);
+
+  const expenseCats = useMemo(() => cats.filter((c) => c.type === "expense"), [cats]);
+  const incomeCats = useMemo(() => cats.filter((c) => c.type === "income"), [cats]);
 
   const filtered = useMemo(() => {
     const since = periodStart(period);
     return txs.filter((t) => {
       if (since && new Date(t.created_at) < since) return false;
+      if (typeFilter !== "all" && t.type !== typeFilter) return false;
       if (categoryFilter !== "all") {
         if (categoryFilter === "none" && t.category_id !== null) return false;
         if (categoryFilter !== "none" && t.category_id !== categoryFilter) return false;
       }
       return true;
     });
-  }, [txs, period, categoryFilter]);
+  }, [txs, period, typeFilter, categoryFilter]);
 
   const exportCSV = () => {
     if (filtered.length === 0) {
@@ -82,10 +97,10 @@ const Reports = () => {
     const rows = filtered.map((t) => [
       formatDateCSV(t.created_at),
       t.type === "income" ? "Receita" : "Despesa",
-      `"${(t.description ?? "").replace(/"/g, '""')}"`,
+      `"${stripEmojis(t.description).replace(/"/g, '""')}"`,
       `"${catNamePlain(t.category_id).replace(/"/g, '""')}"`,
       Number(t.amount).toFixed(2).replace(".", ","),
-      `"${(t.payment_method ?? "").replace(/"/g, '""')}"`,
+      `"${stripEmojis(t.payment_method).replace(/"/g, '""')}"`,
     ]);
     const csv = [header.join(";"), ...rows.map((r) => r.join(";"))].join("\r\n");
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
@@ -129,14 +144,43 @@ const Reports = () => {
             <TabsTrigger value="all">Tudo</TabsTrigger>
           </TabsList>
         </Tabs>
+        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeFilter)}>
+          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="expense">💸 Despesa</SelectItem>
+            <SelectItem value="income">💰 Receita</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
           <SelectTrigger className="sm:w-64"><SelectValue placeholder="Categoria" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas as categorias</SelectItem>
             <SelectItem value="none">Sem categoria</SelectItem>
-            {cats.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
-            ))}
+            {typeFilter === "all" ? (
+              <>
+                {expenseCats.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-destructive">── Despesas ──</SelectLabel>
+                    {expenseCats.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+                {incomeCats.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-success">── Receitas ──</SelectLabel>
+                    {incomeCats.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+              </>
+            ) : (
+              (typeFilter === "expense" ? expenseCats : incomeCats).map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>
