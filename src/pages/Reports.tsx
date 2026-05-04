@@ -39,6 +39,7 @@ const Reports = () => {
   const [txs, setTxs] = useState<Tx[]>([]);
   const [cats, setCats] = useState<Category[]>([]);
   const [period, setPeriod] = useState<Period>("month");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const load = async () => {
