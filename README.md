@@ -209,11 +209,13 @@ Após o desenvolvimento completo, o PRD foi atualizado para refletir o app real 
 
 #### Interação com o Copilot — Validação do PRD v4.0
 
-<!-- 
-📌 INSTRUÇÃO: Cole aqui o trecho da resposta do Copilot validando o PRD v4.0
--->
+Prompt enviado ao Copilot:
 
-**[RESERVADO — colar validação do Copilot ao PRD v4.0]**
+"Você é um especialista em Product Management. Vou te apresentar o PRD v4.0 final de um app de finanças pessoais com IA chamado Bolsa, desenvolvido com Vibe Coding usando Lovable e Claude. Este PRD reflete o app real que foi construído e está em produção. Quero que você: 1) Valide se o documento está coeso e completo; 2) Identifique se há alguma inconsistência ou informação faltante; 3) Sugira melhorias de clareza ou estrutura. Não precisa sugerir novas funcionalidades — o MVP está concluído."
+
+Resposta do Copilot:
+
+"O PRD v4.0 está bem estruturado e reflete com fidelidade um produto real em produção. As melhorias aplicadas em relação à versão anterior tornaram o documento mais preciso e acionável. Pontos que confirmam a solidez: Autenticação detalhada com tratamento de erros comuns — e-mail já cadastrado e senha inválida — ausentes na versão anterior. Categorias com referência técnica ao campo icon da tabela, eliminando ambiguidade na implementação. Exemplo concreto de meta por categoria ('Gastar até R$300 em Alimentação') reforça a clareza do requisito. Exportação CSV com separador ponto e vírgula e cabeçalho na primeira linha — detalhes críticos para compatibilidade com Excel em português brasileiro. Landing Page identificada como pública no fluxo de telas — informação relevante para controle de acesso. O documento está maduro, coeso e pronto para ser usado como referência técnica e de portfólio."
 
 ---
 
@@ -374,44 +376,6 @@ Testes automatizados · Edge Functions · Relatórios comparativos
 | Dashboard Mobile | Resumo Mobile |
 |-----------------|---------------|
 | ![Dashboard Mobile](https://raw.githubusercontent.com/poliato2015-max/imagens/main/projeto_ia_lovable_claude_copilot_app_financas_tela_dash_claro_app.jpg) | ![Resumo Mobile](https://raw.githubusercontent.com/poliato2015-max/imagens/main/projeto_ia_lovable_claude_copilot_app_financas_tela_resumo_escuro_app.jpg) |
-
----
-
-## 💬 Interações com o Copilot
-
-### Revisão do PRD v3.0 — Triagem de Sugestões
-
-<!-- 📌 Cole aqui o trecho da resposta do Copilot revisando o PRD v3.0 -->
-
-> **Prompt enviado ao Copilot:**
-> *"Você é um especialista em Product Management. Vou te apresentar um PRD de um app de finanças pessoais com IA. Quero que você revise, sugira melhorias na clareza e adicione qualquer detalhe técnico ou de UX que esteja faltando..."*
-
-> **Resposta do Copilot (trecho principal):**
-> 
-> **[RESERVADO — cole aqui o trecho da resposta do Copilot sobre o PRD v3.0]**
-
----
-
-### Devolução ao Copilot — Justificativa das Decisões
-
-<!-- 📌 Cole aqui o trecho da sua resposta ao Copilot explicando o que aceitou e recusou -->
-
-> **Prompt enviado ao Copilot:**
-> *"Obrigado pela revisão anterior do PRD. Analisei todas as suas sugestões e tomei as seguintes decisões: Aceitei 9 melhorias... Deixei 6 itens para fase 2... Recusei 7 sugestões..."*
-
-> **Resposta do Copilot (validação):**
->
-> **[RESERVADO — cole aqui a resposta do Copilot validando suas decisões]**
-
----
-
-### Validação Final do PRD v4.0
-
-<!-- 📌 Cole aqui a resposta do Copilot validando o PRD v4.0 final -->
-
-> **Resposta do Copilot:**
->
-> **[RESERVADO — cole aqui a validação final do Copilot ao PRD v4.0]**
 
 ---
 
