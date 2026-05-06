@@ -22,7 +22,6 @@
 - [A Jornada — Do PRD ao App em Produção](#-a-jornada---do-prd-ao-app-em-produção)
 - [PRD Final v4.0](#-prd-final-v40)
 - [Telas do App](#-telas-do-app)
-- [Interações com o Copilot](#-interações-com-o-copilot)
 - [Reflexão sobre o Processo](#-reflexão-sobre-o-processo)
 - [Como Executar Localmente](#-como-executar-localmente)
 
