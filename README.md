@@ -22,7 +22,6 @@
 - [A Jornada — Do PRD ao App em Produção](#-a-jornada---do-prd-ao-app-em-produção)
 - [PRD Final v4.0](#-prd-final-v40)
 - [Telas do App](#-telas-do-app)
-- [Interações com o Copilot](#-interações-com-o-copilot)
 - [Reflexão sobre o Processo](#-reflexão-sobre-o-processo)
 - [Como Executar Localmente](#-como-executar-localmente)
 
@@ -75,7 +74,7 @@ O objetivo é transformar ideias em um projeto real e construir um portfólio qu
 
 ### Etapa 1 — Entendendo o Desafio e Definindo as Ferramentas
 
-O primeiro passo foi analisar o desafio proposto pelo professor e definir as ferramentas que seriam usadas:
+O primeiro passo foi analisar o desafio proposto pelo professor e definir as ferramentas:
 
 - **Claude** como mentor orientando cada etapa
 - **Copilot Web** para refinamento do PRD
@@ -94,7 +93,6 @@ O projeto `finances-app` foi criado no Supabase com as seguintes configurações
 - **Região:** South America (São Paulo) — menor latência para usuários brasileiros
 - **Enable Data API:** ativado para comunicação via supabase-js
 - **RLS:** habilitado para segurança por usuário
-- **Credenciais anotadas:** Project URL + Publishable Key
 
 > 💡 Durante o desenvolvimento descobrimos que o Lovable usa um **Lovable Cloud** próprio baseado em Supabase. O banco externo será conectado em uma fase futura do projeto.
 
@@ -102,7 +100,7 @@ O projeto `finances-app` foi criado no Supabase com as seguintes configurações
 
 ### Etapa 3 — Construindo o PRD v1.0
 
-O PRD (Product Requirements Document) foi construído iterativamente. Iniciamos com as funcionalidades base do professor e fomos enriquecendo com decisões estratégicas:
+O PRD foi construído iterativamente. Iniciamos com as funcionalidades base do professor e enriquecemos com decisões estratégicas:
 
 **Funcionalidades base:**
 - Registro de gastos por chat em linguagem natural
@@ -113,7 +111,7 @@ O PRD (Product Requirements Document) foi construído iterativamente. Iniciamos 
 
 **Decisões adicionadas após análise crítica:**
 - ✅ Exportação em CSV — diferencial para imposto de renda e planilhas
-- ✅ Interface responsiva (mobile 375px + desktop 1280px) — sem custo de crédito extra
+- ✅ Interface responsiva (mobile 375px + desktop 1280px)
 - ✅ Integração com Supabase — dados reais e persistentes
 - ✅ Dark mode — preferência salva no perfil
 
@@ -121,43 +119,31 @@ O PRD (Product Requirements Document) foi construído iterativamente. Iniciamos 
 
 ### Etapa 4 — Refinando com o Copilot (PRD v2.0 e v3.0)
 
-O PRD foi levado ao **GitHub Copilot Web** para revisão. Das sugestões recebidas, foi feita uma triagem crítica:
+O PRD foi levado ao **GitHub Copilot Web** para revisão técnica e de UX.
 
-**✅ Aceitas (9 melhorias):**
-- Persona definida com contexto real
-- KPIs visuais na tela inicial
-- Fallback manual para categorização
-- Filtro por período no Dashboard
-- Metas por categoria
-- Transparência nas sugestões da IA
-- Dark mode
-- Campos adicionais nas tabelas
-- Deploy na Vercel
+**Prompt enviado ao Copilot:**
 
-**⏳ Fase 2 (6 itens):**
-- PWA + notificações push
-- Exportação em PDF
-- Testes automatizados
-- Alertas por e-mail
+> *"Você é um especialista em Product Management. Vou te apresentar um PRD de um app de finanças pessoais com IA. Quero que você revise, sugira melhorias na clareza e adicione qualquer detalhe técnico ou de UX que esteja faltando para que um agente de IA como o Lovable consiga gerar o app com precisão."*
 
-**❌ Recusadas (7 itens):**
-- Login social (complexidade desnecessária para o MVP)
-- Edge Functions (o Lovable gerencia nativamente)
-- Rate limiting (infraestrutura de produção além do MVP)
-- JWT manual (o Supabase Auth já gerencia)
+**Resposta do Copilot (principais sugestões):**
 
-> 💡 **Aprendizado:** O Copilot pensou como arquiteto de sistema. Filtrar as sugestões com critério de MVP foi essencial para não inchar o escopo.
+> *"1. Visão Geral: especificar suporte a PWA e definir integração do agente de IA. 2. Problema: enriquecer com personas. 3. Funcionalidades: incluir login social, fallback manual para categorização, filtro por período no dashboard, metas por categoria, notificações ao estourar meta, exportação em PDF. 4. Stack: confirmar uso de React Router e Edge Functions no Supabase. 5. Design: adicionar dark mode, microinterações e testes com Lighthouse. 6. Entregável: incluir testes automatizados e definir plataforma de deploy."*
 
-#### Interação com o Copilot — Validação do PRD v3.0
+Das 22 sugestões recebidas, foi feita uma **triagem crítica**:
 
-<!-- 
-📌 INSTRUÇÃO: Cole aqui o trecho da resposta do Copilot validando o PRD v3.0
-Exemplo de formato:
+| Decisão | Qtd | Motivo |
+|---------|-----|--------|
+| ✅ **Aceitos** | 9 | Agregam valor sem aumentar complexidade do MVP |
+| ⏳ **Fase 2** | 6 | Dependem de infraestrutura além do escopo atual |
+| ❌ **Recusados** | 7 | Lovable e Supabase já gerenciam nativamente |
 
-> **Copilot:** "Sim, o PRD v3.0 está coeso, consistente e pronto para ser usado como prompt no Lovable..."
--->
+**Devolução ao Copilot com justificativa das decisões:**
 
-**[RESERVADO — colar validação do Copilot ao PRD v3.0]**
+> *"Aceitei 9 melhorias — persona, KPIs visuais, fallback manual, filtro de período, metas por categoria, transparência da IA, dark mode, campos adicionais nas tabelas e deploy na Vercel. Deixei 6 para fase 2 (PWA, notificações, PDF, microinterações, testes, alertas por e-mail). Recusei 7 (login social, biblioteca de gráficos, Edge Functions, JWT manual, rate limiting, atalhos de teclado e API externa de IA) pois o Lovable e Supabase já gerenciam nativamente. Você valida que o PRD v3.0 está pronto para o Lovable?"*
+
+**Validação do Copilot ao PRD v3.0:**
+
+> *"Sim, o PRD v3.0 está coeso, consistente e pronto para ser usado como prompt no Lovable. Você conseguiu equilibrar bem o escopo do MVP com clareza técnica e de UX, sem deixar pontos ambíguos. Clareza de persona e objetivo — a persona está bem definida e conecta diretamente com o problema. Funcionalidades descritas com critérios objetivos — elimina interpretações vagas. Stack completa e alinhada com o Lovable. Entregável com fluxo linear e bem descrito. Evoluções futuras separadas claramente, evitando escopo inchado. Em resumo: o PRD está maduro, detalhado e acionável."*
 
 ---
 
@@ -171,7 +157,7 @@ Com o PRD refinado, o prompt final foi enviado ao Lovable em uma única mensagem
 - Integração automática com banco de dados
 - Dark mode e responsividade
 
-**Créditos utilizados estrategicamente:** cada prompt consolidava múltiplas correções em um único crédito, evitando desperdício.
+> 💡 **Estratégia de créditos:** cada prompt consolidava múltiplas correções em um único crédito, evitando desperdício.
 
 ---
 
@@ -179,27 +165,23 @@ Com o PRD refinado, o prompt final foi enviado ao Lovable em uma única mensagem
 
 O app passou por **3 rodadas completas de avaliação** tela por tela, totalizando **19+ correções mapeadas** e aplicadas:
 
-#### Principais correções e melhorias identificadas:
-
 | # | Tela | Correção |
 |---|------|----------|
 | 1 | Cadastro | Mensagens de erro em inglês → português |
 | 2 | Cadastro | Campo aceita 1 nome → exigir nome + sobrenome |
 | 3 | Cadastro | Campo "Repetir senha" ausente |
-| 4 | Cadastro | Checklist visual de política de senha |
+| 4 | Cadastro | Checklist visual de política de senha em tempo real |
 | 5 | Registro | Toggle Gasto/Receita removido — IA detecta automaticamente |
-| 6 | Registro | Distinção RECEITA vs DESPESA (lacuna crítica do PRD) |
+| 6 | Registro | **Distinção RECEITA vs DESPESA** — lacuna crítica do PRD |
 | 7 | Dashboard | Tooltip invisível no dark mode |
 | 8 | Dashboard | Gráfico Ano agrupando por datas em vez de meses |
-| 9 | Dashboard | 3 gráficos com propósitos distintos |
+| 9 | Dashboard | 3 gráficos com propósitos distintos implementados |
 | 10 | Metas | Date picker sem fechar automaticamente |
 | 11 | Metas | Categorias de receita ausentes |
 | 12 | Relatórios | Emojis corrompidos no CSV |
 | 13 | Relatórios | Filtro por tipo (Despesa/Receita) ausente |
 
-#### Descoberta mais importante:
-
-> 💡 O PRD original não contemplava a **distinção entre receita e despesa** — uma lacuna real identificada durante os testes. Ao registrar "recebi salário de R$1.000", o app registrava como gasto na categoria "Outros". Essa correção impactou toda a arquitetura: banco de dados, dashboard, metas e relatórios. É um exemplo real de como o Vibe Coding exige pensamento crítico além do prompt.
+> 💡 **Descoberta mais importante:** O PRD original não contemplava a **distinção entre receita e despesa**. Ao registrar "recebi salário de R$1.000", o app registrava como gasto na categoria "Outros". Essa correção impactou toda a arquitetura: banco de dados, dashboard, metas e relatórios. É um exemplo real de como o Vibe Coding exige pensamento crítico além do prompt.
 
 ---
 
@@ -207,13 +189,13 @@ O app passou por **3 rodadas completas de avaliação** tela por tela, totalizan
 
 Após o desenvolvimento completo, o PRD foi atualizado para refletir o app real em produção e validado novamente pelo Copilot.
 
-#### Interação com o Copilot — Validação do PRD v4.0
+**Prompt enviado ao Copilot:**
 
-<!-- 
-📌 INSTRUÇÃO: Cole aqui o trecho da resposta do Copilot validando o PRD v4.0
--->
+> *"Você é um especialista em Product Management. Vou te apresentar o PRD v4.0 final do app Bolsa, desenvolvido com Vibe Coding usando Lovable e Claude. Este PRD reflete o app real em produção. Quero que você: 1) Valide se está coeso e completo; 2) Identifique inconsistências; 3) Sugira melhorias de clareza. Não precisa sugerir novas funcionalidades — o MVP está concluído."*
 
-**[RESERVADO — colar validação do Copilot ao PRD v4.0]**
+**Validação do Copilot ao PRD v4.0:**
+
+> *"O PRD v4.0 está bem estruturado e reflete com fidelidade um produto real em produção. Pontos que confirmam a solidez: Autenticação detalhada com tratamento de erros comuns. Categorias com referência técnica ao campo icon da tabela. Exemplo concreto de meta por categoria ('Gastar até R$300 em Alimentação'). Exportação CSV com separador ponto e vírgula e cabeçalho na primeira linha — detalhes críticos para compatibilidade com Excel em português brasileiro. Landing Page identificada como pública no fluxo de telas. O documento está maduro, coeso e pronto para ser usado como referência técnica e de portfólio."*
 
 ---
 
@@ -245,7 +227,8 @@ Pessoas têm dificuldade em manter o controle financeiro por causa da complexida
 das planilhas e da falta de tempo. O Bolsa resolve isso permitindo registrar qualquer
 transação — gasto ou receita — em linguagem natural por texto ou voz, com um agente
 de IA que analisa hábitos e sugere formas de economizar de forma transparente e educativa.
-Exemplo: "Sugiro reduzir gastos em Lazer porque você gastou 35% acima da média dos últimos 3 meses."
+Exemplo: "Sugiro reduzir gastos em Lazer porque você gastou 35% acima da média
+dos últimos 3 meses."
 
 3. Funcionalidades do MVP
 - Autenticação: cadastro e login com e-mail e senha. Validações em português:
@@ -377,44 +360,6 @@ Testes automatizados · Edge Functions · Relatórios comparativos
 
 ---
 
-## 💬 Interações com o Copilot
-
-### Revisão do PRD v3.0 — Triagem de Sugestões
-
-<!-- 📌 Cole aqui o trecho da resposta do Copilot revisando o PRD v3.0 -->
-
-> **Prompt enviado ao Copilot:**
-> *"Você é um especialista em Product Management. Vou te apresentar um PRD de um app de finanças pessoais com IA. Quero que você revise, sugira melhorias na clareza e adicione qualquer detalhe técnico ou de UX que esteja faltando..."*
-
-> **Resposta do Copilot (trecho principal):**
-> 
-> **[RESERVADO — cole aqui o trecho da resposta do Copilot sobre o PRD v3.0]**
-
----
-
-### Devolução ao Copilot — Justificativa das Decisões
-
-<!-- 📌 Cole aqui o trecho da sua resposta ao Copilot explicando o que aceitou e recusou -->
-
-> **Prompt enviado ao Copilot:**
-> *"Obrigado pela revisão anterior do PRD. Analisei todas as suas sugestões e tomei as seguintes decisões: Aceitei 9 melhorias... Deixei 6 itens para fase 2... Recusei 7 sugestões..."*
-
-> **Resposta do Copilot (validação):**
->
-> **[RESERVADO — cole aqui a resposta do Copilot validando suas decisões]**
-
----
-
-### Validação Final do PRD v4.0
-
-<!-- 📌 Cole aqui a resposta do Copilot validando o PRD v4.0 final -->
-
-> **Resposta do Copilot:**
->
-> **[RESERVADO — cole aqui a validação final do Copilot ao PRD v4.0]**
-
----
-
 ## 🧠 Reflexão sobre o Processo
 
 ### O que aprendi com o Vibe Coding
@@ -433,7 +378,7 @@ O Lovable gerou código com bugs reais: tooltip invisível no dark mode, cálcul
 
 **4. Vibe Coding não significa "sem pensar"**
 
-O maior equívoco sobre Vibe Coding é achar que é só escrever um prompt e o app aparece pronto. Na prática, exige: pensamento crítico sobre o produto, conhecimento técnico para diagnosticar bugs, habilidade de comunicação para escrever prompts precisos e capacidade de decisão para priorizar o que entra no MVP.
+O maior equívoco sobre Vibe Coding é achar que é só escrever um prompt e o app aparece pronto. Na prática exige: pensamento crítico sobre o produto, conhecimento técnico para diagnosticar bugs, habilidade de comunicação para escrever prompts precisos e capacidade de decisão para priorizar o que entra no MVP.
 
 **5. A jornada importa tanto quanto o destino**
 
