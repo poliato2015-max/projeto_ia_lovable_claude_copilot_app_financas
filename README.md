@@ -419,7 +419,7 @@ npm run dev
 
 ## 👨‍💻 Autor
 
-Desenvolvido por **Marcelo Oliveira** como parte do desafio Vibe Coding da DIO.
+Desenvolvido por **Marcelo Poliato de Oliveira** como parte do desafio Vibe Coding da DIO.
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Conectar-0077B5?logo=linkedin)](https://www.linkedin.com/in/marcelo-poliato)
 [![GitHub](https://img.shields.io/badge/GitHub-poliato2015--max-181717?logo=github)](https://github.com/poliato2015-max)
