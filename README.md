@@ -1,4 +1,4 @@
-# 💰 Bolsa — App de Finanças Pessoais com IA
+# 💰 Bolsa - App de Finanças Pessoais com IA
 
 > Projeto desenvolvido como parte do desafio **Vibe Coding** da [DIO](https://dio.me), utilizando inteligência artificial para criar um app completo de controle financeiro pessoal.
 
