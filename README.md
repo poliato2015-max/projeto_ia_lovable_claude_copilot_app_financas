@@ -417,19 +417,8 @@ npm run dev
 
 ---
 
-## 👨‍💻 Autor
+# <img src="https://github.com/poliato2015-max.png" width="40" height="40" style="border-radius: 50%;" alt="Marcelo Poliato"> Autor
+Desenvolvido por **Marcelo Poliato de Oliveira** como projeto prático de desenvolvimento assistido por IA Generativa.
 
-Desenvolvido por **Marcelo Poliato de Oliveira** como parte do desafio Vibe Coding da DIO.
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Conectar-0077B5?logo=linkedin)](https://www.linkedin.com/in/marcelo-poliato)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Marcelo%20Poliato-0077B5?logo=linkedin)](https://www.linkedin.com/in/marcelo-poliato)
 [![GitHub](https://img.shields.io/badge/GitHub-poliato2015--max-181717?logo=github)](https://github.com/poliato2015-max)
-
----
-
-## 📜 Licença
-
-Este projeto foi desenvolvido para fins educacionais como parte do programa de cursos da [DIO](https://dio.me).
-
----
-
-*Desenvolvido com 💚 usando Vibe Coding — Claude + Copilot + Lovable*
